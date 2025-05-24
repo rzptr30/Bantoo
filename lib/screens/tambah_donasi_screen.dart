@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
 class TambahDonasiScreen extends StatefulWidget {
-  const TambahDonasiScreen({super.key});
+  const TambahDonasiScreen({Key? key}) : super(key: key);
 
   @override
   State<TambahDonasiScreen> createState() => _TambahDonasiScreenState();
@@ -10,80 +10,127 @@ class TambahDonasiScreen extends StatefulWidget {
 
 class _TambahDonasiScreenState extends State<TambahDonasiScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  final namaController = TextEditingController();
-  final nominalController = TextEditingController();
-  final pesanController = TextEditingController();
-  final fotoController = TextEditingController();
-
-  bool isLoading = false;
-
-  void simpan() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => isLoading = true);
-
-    final success = await ApiService.tambahDonasi(
-      namaController.text,
-      nominalController.text,
-      pesanController.text,
-      foto: fotoController.text,
-      progress: 0, // default 0
-    );
-
-    setState(() => isLoading = false);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(success
-          ? 'Donasi berhasil ditambahkan'
-          : 'Gagal menambah donasi'),
-    ));
-    if (success) Navigator.pop(context, true);
+  
+  final _namaController = TextEditingController();
+  final _nominalController = TextEditingController();
+  final _pesanController = TextEditingController();
+  final _fotoController = TextEditingController();
+  
+  Future<void> _tambahDonasi() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await ApiService.tambahDonasi(
+          nama: _namaController.text,
+          nominal: double.parse(_nominalController.text),
+          pesan: _pesanController.text,
+          foto: _fotoController.text,
+        );
+        
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Donasi berhasil ditambahkan')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tambah Donasi')),
+      appBar: AppBar(
+        title: const Text('Tambah Donasi Baru'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: namaController,
-                  decoration: const InputDecoration(labelText: 'Nama'),
-                  validator: (v) => v!.isEmpty ? 'Masukkan nama' : null,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _namaController,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Donasi',
                 ),
-                TextFormField(
-                  controller: nominalController,
-                  decoration: const InputDecoration(labelText: 'Nominal'),
-                  keyboardType: TextInputType.number,
-                  validator: (v) => v!.isEmpty ? 'Masukkan nominal' : null,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Nama tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nominalController,
+                decoration: const InputDecoration(
+                  labelText: 'Nominal Donasi',
+                  prefixText: 'Rp ',
                 ),
-                TextFormField(
-                  controller: pesanController,
-                  decoration: const InputDecoration(labelText: 'Pesan'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Nominal tidak boleh kosong';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Masukkan angka yang valid';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _pesanController,
+                decoration: const InputDecoration(
+                  labelText: 'Pesan Donasi',
                 ),
-                TextFormField(
-                  controller: fotoController,
-                  decoration: const InputDecoration(labelText: 'Foto (URL)'),
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Pesan tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _fotoController,
+                decoration: const InputDecoration(
+                  labelText: 'URL Foto',
+                  hintText: 'assets/images/donasi_1.jpg',
                 ),
-                const SizedBox(height: 24),
-                isLoading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: simpan,
-                        child: const Text('Simpan'),
-                      ),
-              ],
-            ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'URL foto tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _tambahDonasi,
+                child: const Text('TAMBAH DONASI'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+  
+  @override
+  void dispose() {
+    _namaController.dispose();
+    _nominalController.dispose();
+    _pesanController.dispose();
+    _fotoController.dispose();
+    super.dispose();
   }
 }

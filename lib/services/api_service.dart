@@ -3,88 +3,126 @@ import 'package:http/http.dart' as http;
 import '../models/donasi_ini.dart';
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2/bantoo_api";
+  // Base URL for your API
+  static const String baseUrl = 'https://your-api-url.com/api';
 
-  /* ────────────────  DONASI  ──────────────── */
-
-  /// Ambil daftar donasi.
-  ///   • Jika server mengirim **array** langsung → `[ {...}, {...} ]`
-  ///   • Atau objek dengan key **data**        → `{ "data": [ {...} ] }`
+  // Get donations list
   static Future<List<Donasi>> getDonasi() async {
-    final response = await http.get(Uri.parse("$baseUrl/read.php"));
-    if (response.statusCode != 200) {
-      throw Exception("Gagal memuat donasi");
-    }
-
-    final decoded = jsonDecode(response.body);
-
-    // 1. Respon berupa array → langsung konversi
-    if (decoded is List) {
-      return decoded.map((e) => Donasi.fromJson(e)).toList();
-    }
-
-    // 2. Respon berupa objek yang memiliki key 'data' berupa array
-    if (decoded is Map && decoded['data'] is List) {
-      return (decoded['data'] as List)
-          .map((e) => Donasi.fromJson(e))
-          .toList();
-    }
-
-    // 3. Format tak dikenal
-    throw Exception("Format respon tak dikenali: $decoded");
+    // For demo purposes, return mock data
+    await Future.delayed(const Duration(seconds: 1));
+    
+    return [
+      Donasi(
+        id: 1,
+        nama: 'Bantuan untuk Korban Banjir',
+        title: 'Bantuan untuk Korban Banjir',
+        description: 'Membantu korban banjir di Jawa Tengah',
+        imageUrl: 'assets/images/donasi_1.jpg',
+        foto: 'assets/images/donasi_1.jpg',
+        target: 50000000,
+        current: 25000000,
+        nominal: 25000000,
+        pesan: 'Semoga bantuan ini bermanfaat',
+        progress: 50.0,
+        deadline: DateTime.now().add(const Duration(days: 15)),
+        isEmergency: true,
+      ),
+      Donasi(
+        id: 2,
+        nama: 'Bantuan Pendidikan Anak',
+        title: 'Bantuan Pendidikan Anak',
+        description: 'Bantuan biaya sekolah untuk anak kurang mampu',
+        imageUrl: 'assets/images/donasi_2.jpg',
+        foto: 'assets/images/donasi_2.jpg',
+        target: 30000000,
+        current: 10000000,
+        nominal: 10000000,
+        pesan: 'Untuk pendidikan anak-anak',
+        progress: 33.3,
+        deadline: DateTime.now().add(const Duration(days: 30)),
+        isEmergency: true,
+      ),
+      Donasi(
+        id: 3,
+        nama: 'Pembangunan Masjid',
+        title: 'Pembangunan Masjid',
+        description: 'Bantuan untuk pembangunan masjid di desa terpencil',
+        imageUrl: 'assets/images/donasi_3.jpg',
+        foto: 'assets/images/donasi_3.jpg',
+        target: 100000000,
+        current: 45000000,
+        nominal: 45000000,
+        pesan: 'Untuk pembangunan masjid',
+        progress: 45.0,
+        deadline: DateTime.now().add(const Duration(days: 60)),
+        isEmergency: false,
+      ),
+    ];
   }
 
- static Future<bool> tambahDonasi(
-    String nama, String nominal, String pesan,
-    {String foto = '', double progress = 0}) async {
-  final res = await http.post(Uri.parse("$baseUrl/create.php"), body: {
-    "nama": nama,
-    "nominal": nominal,
-    "pesan": pesan,
-    "foto": foto,
-    "progress": progress.toString(),
-  });
-  return res.statusCode == 200;
-}
-
-static Future<bool> updateDonasi(
-    String id, String nama, String nominal, String pesan,
-    {String foto = '', double progress = 0}) async {
-  final res = await http.post(Uri.parse("$baseUrl/update.php"), body: {
-    "id": id,
-    "nama": nama,
-    "nominal": nominal,
-    "pesan": pesan,
-    "foto": foto,
-    "progress": progress.toString(),
-  });
-  return res.statusCode == 200;
-}
-
-
-  static Future<bool> deleteDonasi(String id) async {
-    final res = await http.post(Uri.parse("$baseUrl/delete.php"), body: {
-      "id": id,
-    });
-    return res.statusCode == 200;
+  // Add a new donation
+  static Future<Donasi> tambahDonasi({
+    required String nama,
+    required double nominal,
+    required String pesan,
+    required String foto,
+    double progress = 0.0,
+  }) async {
+    // For demo purposes, simulate API call
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Create a new Donasi object with the current date + random ID
+    return Donasi(
+      id: DateTime.now().millisecondsSinceEpoch,
+      nama: nama,
+      title: nama,
+      description: pesan,
+      imageUrl: foto,
+      foto: foto,
+      target: nominal * 2, // Just for demo
+      current: nominal,
+      nominal: nominal,
+      pesan: pesan,
+      progress: progress,
+      deadline: DateTime.now().add(const Duration(days: 30)),
+    );
   }
 
-  /* ────────────────  AUTH  ──────────────── */
-
-  static Future<bool> loginUser(String email, String password) async {
-    final res = await http.post(Uri.parse("$baseUrl/login_user.php"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "password": password}));
-    final json = jsonDecode(res.body);
-    return json['success'] == true;
+  // Update an existing donation
+  static Future<Donasi> updateDonasi(
+    int id, {
+    required String nama,
+    required double nominal,
+    required String pesan,
+    required String foto,
+    required double progress,
+  }) async {
+    // For demo purposes, simulate API call
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Return updated Donasi object
+    return Donasi(
+      id: id,
+      nama: nama,
+      title: nama,
+      description: pesan,
+      imageUrl: foto,
+      foto: foto,
+      target: nominal * 2, // Just for demo
+      current: nominal,
+      nominal: nominal,
+      pesan: pesan,
+      progress: progress,
+      deadline: DateTime.now().add(const Duration(days: 30)),
+    );
   }
 
-  static Future<bool> registerUser(String email, String password) async {
-    final res = await http.post(Uri.parse("$baseUrl/register_user.php"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "password": password}));
-    final json = jsonDecode(res.body);
-    return json['success'] == true;
+  // Delete a donation
+  static Future<bool> deleteDonasi(int id) async {
+    // For demo purposes, simulate API call
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Return success
+    return true;
   }
-  
 }

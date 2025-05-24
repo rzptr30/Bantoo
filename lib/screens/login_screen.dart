@@ -1,119 +1,127 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:provider/provider.dart';
+// Import your auth provider if you have one
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  String errorMessage = '';
+  bool _isLoading = false;
+  String _errorMessage = '';
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> login() async {
-    final url = Uri.parse('http://10.0.2.2/bantoo_api/login_user.php');
+  Future<void> _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
     try {
-      final response = await http.post(
-        url,
-        body: {
-          'email': emailController.text,
-          'password': passwordController.text,
-        },
-      );
-
-      final data = json.decode(response.body);
-      print('Response body: $data');
-
-      if (data['success']) {
-        setState(() => errorMessage = '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login berhasil!")),
-        );
-        Navigator.pushReplacementNamed(context, '/dashboard');
-      } else {
-        setState(() => errorMessage = data['message']);
+      // For demo purposes, we'll simulate a login delay
+      // In a real app, you would authenticate with your API
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // You could store user info in a shared preferences or provider here
+      // Example: authProvider.setUser('rzptr30', '2025-05-24 16:20:59');
+      
+      if (mounted) {
+        // Navigate to your existing dashboard
+        Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } catch (e) {
-      setState(() => errorMessage = "Terjadi kesalahan saat login");
-      print('Error: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Log In"),
-        centerTitle: true,
+        title: const Text('Login'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-        child: Column(
-          children: [
-            const Text(
-              'Sign in to your account',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.teal,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/login_bg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/logo_bantoo.png',
+                width: 150,
               ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.person_outline),
-                labelText: 'Email',
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.lock_outline),
-                labelText: 'Password',
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: login,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+              const SizedBox(height: 30),
+              
+              // Email field
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
-                child: const Text('Log In'),
+                keyboardType: TextInputType.emailAddress,
               ),
-            ),
-            const SizedBox(height: 16),
-            if (errorMessage.isNotEmpty)
-              Text(errorMessage, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/register');
-              },
-              child: const Text.rich(
-                TextSpan(
-                  text: "Don't have an account? ",
-                  children: [
-                    TextSpan(
-                      text: "Sign Up",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+              
+              const SizedBox(height: 15),
+              
+              // Password field
+              TextField(
+                controller: _passwordController,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                obscureText: true,
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Error message
+              if (_errorMessage.isNotEmpty)
+                Text(
+                  _errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                
+              const SizedBox(height: 15),
+              
+              // Login button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  child: _isLoading 
+                    ? const CircularProgressIndicator()
+                    : const Text('Login', style: TextStyle(fontSize: 16)),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

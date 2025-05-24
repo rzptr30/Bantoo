@@ -1,94 +1,116 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 import '../models/donasi_ini.dart';
-import 'edit_donasi_screen.dart';
-import 'tambah_donasi_screen.dart';
+import '../services/api_service.dart';
 
-class DonasiListPage extends StatefulWidget {
-  const DonasiListPage({super.key});
+class DonasiListScreen extends StatefulWidget {
+  const DonasiListScreen({Key? key}) : super(key: key);
 
   @override
-  State<DonasiListPage> createState() => _DonasiListPageState();
+  State<DonasiListScreen> createState() => _DonasiListScreenState();
 }
 
-class _DonasiListPageState extends State<DonasiListPage> {
-  List _donasi = [];
+class _DonasiListScreenState extends State<DonasiListScreen> {
+  late Future<List<Donasi>> futureDonasi;
 
   @override
   void initState() {
     super.initState();
-    fetchDonasi();
+    futureDonasi = ApiService.getDonasi();
   }
 
-  void fetchDonasi() async {
-    final data = await ApiService.getDonasi();
-    setState(() => _donasi = data);
+  void _refresh() {
+    setState(() {
+      futureDonasi = ApiService.getDonasi();
+    });
   }
 
-  void hapus(String id) async {
-    await ApiService.deleteDonasi(id);
-    fetchDonasi();
+  Future<void> _deleteDonasi(int id) async {
+    try {
+      await ApiService.deleteDonasi(id);
+      _refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Donasi berhasil dihapus')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _addDonasi() async {
+    await Navigator.pushNamed(context, '/tambah-donasi');
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Data Donasi')),
-      body: ListView.builder(
-        itemCount: _donasi.length,
-        itemBuilder: (context, index) {
-          final item = _donasi[index];
+      appBar: AppBar(
+        title: const Text('Daftar Donasi'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<Donasi>>(
+        future: futureDonasi,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-          // konversi Map → Donasi agar mudah dipakai ulang
-          final donasiObj = Donasi(
-            id: item['id'].toString(),
-            nama: item['nama'],
-            nominal: item['nominal'].toString(),
-            pesan: item['pesan'] ?? '',
-            foto: (item['foto'] ?? '').toString(),
-            progress:
-                double.tryParse(item['progress']?.toString() ?? '0') ?? 0,
-          );
+          final donasiList = snapshot.data ?? [];
+          
+          if (donasiList.isEmpty) {
+            return const Center(child: Text('Belum ada donasi'));
+          }
 
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundImage: NetworkImage(donasiObj.foto),
-            ),
-            title: Text(donasiObj.nama),
-            subtitle: Text("Rp ${donasiObj.nominal}"),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditDonasiScreen(donasi: donasiObj),
+          return ListView.builder(
+            itemCount: donasiList.length,
+            itemBuilder: (context, index) {
+              final donasi = donasiList[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: AssetImage(donasi.foto),
+                  ),
+                  title: Text(donasi.nama),
+                  subtitle: Text('Rp ${donasi.nominal.toStringAsFixed(0)} - ${donasi.pesan}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/edit-donasi',
+                            arguments: donasi,
+                          ).then((_) => _refresh());
+                        },
                       ),
-                    );
-                    if (result == true) fetchDonasi();
-                  },
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _deleteDonasi(donasi.id),
+                      ),
+                    ],
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => hapus(donasiObj.id),
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
+        onPressed: _addDonasi,
         child: const Icon(Icons.add),
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TambahDonasiScreen()),
-          );
-          if (result == true) fetchDonasi();
-        },
       ),
     );
   }

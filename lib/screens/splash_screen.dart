@@ -1,39 +1,44 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-//import 'onboarding_screen.dart'; // pastikan path-nya benar
-import 'login_screen.dart';
-
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({Key? key}) : super(key: key);
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Timer selama 3 detik
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+    // Navigate to login screen after delay
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // atau warna utama aplikasimu
-      body: Center(
-        child: Image.asset(
-          'assets/images/logo_bantoo.png',
-          width: 200,
-          height: 200,
+      body: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Remove const here
+              Image.asset(
+                'assets/images/logo_bantoo.png',
+                width: 200,
+              ),
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(),
+            ],
+          ),
         ),
       ),
     );

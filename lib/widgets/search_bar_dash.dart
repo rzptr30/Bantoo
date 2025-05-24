@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SearchBarDash extends StatelessWidget {
-  const SearchBarDash({super.key});
+  const SearchBarDash({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -9,14 +9,14 @@ class SearchBarDash extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: TextField(
         decoration: InputDecoration(
+          hintText: 'Search campaigns...',
           prefixIcon: const Icon(Icons.search),
-          hintText: 'Search activity',
-          filled: true,
-          fillColor: const Color(0xFFF1F3F4),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(30),
           ),
+          filled: true,
+          fillColor: Colors.grey[200],
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
         ),
       ),
     );
