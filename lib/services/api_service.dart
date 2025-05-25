@@ -3,22 +3,27 @@ import 'package:http/http.dart' as http;
 import '../models/donasi_ini.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2/bantoo_api'; // Sesuaikan dengan URL server Anda
+  static const String baseUrl = 'http://10.0.2.2/bantoo_api'; // URL server
 
   // Get semua donasi
   static Future<List<Donasi>> getDonasi() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/read.php'));
       
+      print('getDonasi - Status Code: ${response.statusCode}');
+      print('getDonasi - Response Body: ${response.body}');
+      
       if (response.statusCode == 200) {
         // Cek apakah response body kosong atau null
         if (response.body.isEmpty) {
+          print('getDonasi - Response body kosong');
           return []; // Kembalikan list kosong jika response body kosong
         }
         
         // Cek apakah response body hanya berisi "null" atau respons kosong
         final bodyTrim = response.body.trim();
         if (bodyTrim == 'null' || bodyTrim == '[]' || bodyTrim == 'false' || bodyTrim == '""') {
+          print('getDonasi - Response body: $bodyTrim');
           return []; // Kembalikan list kosong
         }
         
@@ -27,22 +32,22 @@ class ApiService {
           return data.map((item) => Donasi.fromJson(item)).toList();
         } catch (e) {
           // Error parsing JSON, kembalikan list kosong
-          print('Error parsing JSON: $e');
+          print('getDonasi - Error parsing JSON: $e');
           return [];
         }
       } else {
         // Server mengembalikan status code error
-        print('Failed to load donasi: ${response.statusCode}');
+        print('getDonasi - Failed to load donasi: ${response.statusCode}');
         return []; // Kembalikan list kosong daripada throw exception
       }
     } catch (e) {
       // Tangkap semua error dan kembalikan list kosong
-      print('Error fetching donasi: $e');
+      print('getDonasi - Error fetching donasi: $e');
       return []; // Kembalikan list kosong daripada throw exception
     }
   }
 
-  // Tambahkan method tambahDonasi
+  // Tambahkan method tambahDonasi dengan logging
   static Future<bool> tambahDonasi({
     String? nama,
     String? title,
@@ -60,35 +65,70 @@ class ApiService {
     bool? isEmergency,
   }) async {
     try {
+      // Buat payload untuk dikirim ke server
+      final Map<String, dynamic> payload = {
+        'nama': nama,
+        'title': title,
+        'description': description,
+        'target_amount': targetAmount,
+        'collected_amount': collectedAmount,
+        'foto': foto,
+        'image_url': imageUrl,
+        'target': target,
+        'current': current,
+        'nominal': nominal,
+        'pesan': pesan,
+        'progress': progress,
+        'deadline': deadline,
+        'is_emergency': isEmergency,
+      };
+      
+      // Log payload yang akan dikirim
+      print('tambahDonasi - Sending payload: ${json.encode(payload)}');
+      
+      // Kirim request ke server
       final response = await http.post(
         Uri.parse('$baseUrl/create.php'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'nama': nama,
-          'title': title,
-          'description': description,
-          'target_amount': targetAmount,
-          'collected_amount': collectedAmount,
-          'foto': foto,
-          'image_url': imageUrl,
-          'target': target,
-          'current': current,
-          'nominal': nominal,
-          'pesan': pesan,
-          'progress': progress,
-          'deadline': deadline,
-          'is_emergency': isEmergency,
-        }),
+        body: json.encode(payload),
       );
       
-      return response.statusCode == 200;
+      // Log response dari server
+      print('tambahDonasi - Response status code: ${response.statusCode}');
+      print('tambahDonasi - Response body: ${response.body}');
+      
+      // Parse response body jika ada
+      Map<String, dynamic>? responseData;
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+          print('tambahDonasi - Parsed response: $responseData');
+        }
+      } catch (e) {
+        print('tambahDonasi - Error parsing response: $e');
+      }
+      
+      // Cek status code dan 'success' field dari response
+      if (response.statusCode == 200) {
+        if (responseData != null && responseData['success'] == true) {
+          print('tambahDonasi - Success: ${responseData['message']}');
+          return true;
+        } else if (responseData != null) {
+          print('tambahDonasi - Failed: ${responseData['message']}');
+          return false;
+        }
+        return true; // Default success jika tidak ada field 'success' di response
+      } else {
+        print('tambahDonasi - Failed with status code: ${response.statusCode}');
+        return false;
+      }
     } catch (e) {
-      print('Error adding donasi: $e');
+      print('tambahDonasi - Error: $e');
       return false;
     }
   }
 
-  // Tambah donasi baru (untuk backward compatibility)
+  // Method tambah donasi baru (alias untuk tambahDonasi)
   static Future<bool> addDonasi({
     String? nama,
     String? title,
@@ -124,7 +164,7 @@ class ApiService {
     );
   }
 
-  // Update donasi
+  // Update donasi dengan logging
   static Future<bool> updateDonasi({
     required int id,
     String? nama,
@@ -143,67 +183,115 @@ class ApiService {
     bool? isEmergency,
   }) async {
     try {
+      // Buat payload untuk dikirim ke server
+      final Map<String, dynamic> payload = {
+        'id': id,
+        'nama': nama,
+        'title': title,
+        'description': description,
+        'target_amount': targetAmount,
+        'collected_amount': collectedAmount,
+        'foto': foto,
+        'image_url': imageUrl,
+        'target': target,
+        'current': current,
+        'nominal': nominal,
+        'pesan': pesan,
+        'progress': progress,
+        'deadline': deadline,
+        'is_emergency': isEmergency,
+      };
+      
+      // Log payload yang akan dikirim
+      print('updateDonasi - Sending payload: ${json.encode(payload)}');
+      
+      // Kirim request ke server
       final response = await http.post(
         Uri.parse('$baseUrl/update.php'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'id': id,
-          'nama': nama,
-          'title': title,
-          'description': description,
-          'target_amount': targetAmount,
-          'collected_amount': collectedAmount,
-          'foto': foto,
-          'image_url': imageUrl,
-          'target': target,
-          'current': current,
-          'nominal': nominal,
-          'pesan': pesan,
-          'progress': progress,
-          'deadline': deadline,
-          'is_emergency': isEmergency,
-        }),
+        body: json.encode(payload),
       );
       
-      return response.statusCode == 200;
+      // Log response dari server
+      print('updateDonasi - Response status code: ${response.statusCode}');
+      print('updateDonasi - Response body: ${response.body}');
+      
+      // Parse response body jika ada
+      Map<String, dynamic>? responseData;
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+          print('updateDonasi - Parsed response: $responseData');
+        }
+      } catch (e) {
+        print('updateDonasi - Error parsing response: $e');
+      }
+      
+      // Cek status code dan 'success' field dari response
+      if (response.statusCode == 200) {
+        if (responseData != null && responseData['success'] == true) {
+          print('updateDonasi - Success: ${responseData['message']}');
+          return true;
+        } else if (responseData != null) {
+          print('updateDonasi - Failed: ${responseData['message']}');
+          return false;
+        }
+        return true; // Default success jika tidak ada field 'success' di response
+      } else {
+        print('updateDonasi - Failed with status code: ${response.statusCode}');
+        return false;
+      }
     } catch (e) {
-      print('Error updating donasi: $e');
+      print('updateDonasi - Error: $e');
       return false;
     }
   }
 
-  // Delete donasi
+  // Delete donasi dengan logging
   static Future<bool> deleteDonasi(int id) async {
     try {
+      // Log payload yang akan dikirim
+      print('deleteDonasi - Deleting donasi with ID: $id');
+      
+      // Kirim request ke server
       final response = await http.post(
         Uri.parse('$baseUrl/delete.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'id': id}),
       );
       
+      // Log response dari server
+      print('deleteDonasi - Response status code: ${response.statusCode}');
+      print('deleteDonasi - Response body: ${response.body}');
+      
       return response.statusCode == 200;
     } catch (e) {
-      print('Error deleting donasi: $e');
+      print('deleteDonasi - Error: $e');
       return false;
     }
   }
   
-  // Get donasi by id
+  // Get donasi by id dengan logging
   static Future<Donasi?> getDonasiById(int id) async {
     try {
+      print('getDonasiById - Fetching donasi with ID: $id');
+      
       final response = await http.get(
         Uri.parse('$baseUrl/read_single.php?id=$id'),
       );
+      
+      print('getDonasiById - Response status code: ${response.statusCode}');
+      print('getDonasiById - Response body: ${response.body}');
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return Donasi.fromJson(data);
       } else {
-        print('Failed to fetch donasi: ${response.statusCode}');
+        print('getDonasiById - Failed to fetch donasi: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('Error fetching donasi: $e');
+      print('getDonasiById - Error: $e');
       return null;
     }
   }
