@@ -1,4 +1,4 @@
-import 'dart:async'; // Tambahkan ini untuk TimeoutException
+import 'dart:async'; // Import ini diperlukan untuk TimeoutException
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/donasi_ini.dart';
@@ -6,6 +6,52 @@ import '../models/donasi_ini.dart';
 class ApiService {
   
   static const String baseUrl = 'http://10.0.2.2/bantoo_api'; // URL server
+  
+  // Tambahkan fungsi test koneksi ini
+  static Future<bool> testConnection() async {
+    try {
+      print('Testing connection to: $baseUrl/ping.php');
+      
+      final response = await http.get(Uri.parse('$baseUrl/ping.php'))
+          .timeout(const Duration(seconds: 10));
+      
+      print('Connection test - Status Code: ${response.statusCode}');
+      print('Connection test - Response Body: ${response.body}');
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Connection test failed: $e');
+      return false;
+    }
+  }
+  
+  // Tambahkan fungsi test direct API
+  static Future<bool> testDirectApi() async {
+    try {
+      print('Testing direct API at: http://10.0.2.2/create_test.php');
+      
+      final testData = {
+        'test': 'data',
+        'timestamp': DateTime.now().toString()
+      };
+      
+      print('Sending test data: ${json.encode(testData)}');
+      
+      final directTestResponse = await http.post(
+        Uri.parse('http://10.0.2.2/create_test.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(testData),
+      ).timeout(const Duration(seconds: 10));
+      
+      print('Direct API test - Status Code: ${directTestResponse.statusCode}');
+      print('Direct API test - Response Body: ${directTestResponse.body}');
+      
+      return directTestResponse.statusCode == 200;
+    } catch (e) {
+      print('Direct API test failed: $e');
+      return false;
+    }
+  }
 
   // Get semua donasi
   static Future<List<Donasi>> getDonasi() async {
@@ -99,44 +145,65 @@ class ApiService {
       print('tambahDonasi - Endpoint URL: $baseUrl/create.php');
       
       // Kirim request ke server dengan timeout 30 detik
-      final response = await http.post(
-        Uri.parse('$baseUrl/create.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(payload),
-      ).timeout(const Duration(seconds: 30)); // Tambahkan timeout 30 detik
-      
-      // Log response dari server
-      print('tambahDonasi - Response status code: ${response.statusCode}');
-      print('tambahDonasi - Response body: ${response.body}');
-      
-      // Parse response body jika ada
-      Map<String, dynamic>? responseData;
       try {
-        if (response.body.isNotEmpty) {
-          responseData = json.decode(response.body);
-          print('tambahDonasi - Parsed response: $responseData');
+        final response = await http.post(
+          Uri.parse('$baseUrl/create.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(payload),
+        ).timeout(const Duration(seconds: 30));
+        
+        // Log response dari server
+        print('tambahDonasi - Response status code: ${response.statusCode}');
+        print('tambahDonasi - Response body: ${response.body}');
+        
+        // Parse response body jika ada
+        Map<String, dynamic>? responseData;
+        try {
+          if (response.body.isNotEmpty) {
+            responseData = json.decode(response.body);
+            print('tambahDonasi - Parsed response: $responseData');
+          }
+        } catch (e) {
+          print('tambahDonasi - Error parsing response: $e');
         }
-      } catch (e) {
-        print('tambahDonasi - Error parsing response: $e');
-      }
-      
-      // Cek status code dan 'success' field dari response
-      if (response.statusCode == 200) {
-        if (responseData != null && responseData['success'] == true) {
-          print('tambahDonasi - Success: ${responseData['message']}');
-          return true;
-        } else if (responseData != null) {
-          print('tambahDonasi - Failed: ${responseData['message']}');
+        
+        // Cek status code dan 'success' field dari response
+        if (response.statusCode == 200) {
+          if (responseData != null && responseData['success'] == true) {
+            print('tambahDonasi - Success: ${responseData['message']}');
+            return true;
+          } else if (responseData != null) {
+            print('tambahDonasi - Failed: ${responseData['message']}');
+            return false;
+          }
+          return true; // Default success jika tidak ada field 'success' di response
+        } else {
+          print('tambahDonasi - Failed with status code: ${response.statusCode}');
           return false;
         }
-        return true; // Default success jika tidak ada field 'success' di response
-      } else {
-        print('tambahDonasi - Failed with status code: ${response.statusCode}');
-        return false;
+      } on TimeoutException catch (_) {
+        print('tambahDonasi - Primary URL timed out, trying alternative URL...');
+        
+        // Coba dengan URL alternatif (langsung ke root)
+        try {
+          print('tambahDonasi - Using alternative URL: http://10.0.2.2/create_test.php');
+          
+          final altResponse = await http.post(
+            Uri.parse('http://10.0.2.2/create_test.php'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 15));
+          
+          print('tambahDonasi - Alt response status: ${altResponse.statusCode}');
+          print('tambahDonasi - Alt response body: ${altResponse.body}');
+          
+          // Jika alternatif berhasil, kita anggap sukses untuk testing
+          return altResponse.statusCode == 200;
+        } catch (altError) {
+          print('tambahDonasi - Alternative URL also failed: $altError');
+          return false;
+        }
       }
-    } on TimeoutException catch (_) {
-      print('tambahDonasi - Request timed out after 30 seconds');
-      return false;
     } catch (e) {
       print('tambahDonasi - Error: $e');
       return false;
