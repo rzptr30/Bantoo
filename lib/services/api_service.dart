@@ -11,13 +11,34 @@ class ApiService {
       final response = await http.get(Uri.parse('$baseUrl/read.php'));
       
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => Donasi.fromJson(item)).toList();
+        // Cek apakah response body kosong atau null
+        if (response.body.isEmpty) {
+          return []; // Kembalikan list kosong jika response body kosong
+        }
+        
+        // Cek apakah response body hanya berisi "null" atau respons kosong
+        final bodyTrim = response.body.trim();
+        if (bodyTrim == 'null' || bodyTrim == '[]' || bodyTrim == 'false' || bodyTrim == '""') {
+          return []; // Kembalikan list kosong
+        }
+        
+        try {
+          final List<dynamic> data = json.decode(response.body);
+          return data.map((item) => Donasi.fromJson(item)).toList();
+        } catch (e) {
+          // Error parsing JSON, kembalikan list kosong
+          print('Error parsing JSON: $e');
+          return [];
+        }
       } else {
-        throw Exception('Failed to load donasi: ${response.statusCode}');
+        // Server mengembalikan status code error
+        print('Failed to load donasi: ${response.statusCode}');
+        return []; // Kembalikan list kosong daripada throw exception
       }
     } catch (e) {
-      throw Exception('Error: $e');
+      // Tangkap semua error dan kembalikan list kosong
+      print('Error fetching donasi: $e');
+      return []; // Kembalikan list kosong daripada throw exception
     }
   }
 
@@ -62,11 +83,12 @@ class ApiService {
       
       return response.statusCode == 200;
     } catch (e) {
-      throw Exception('Error adding donasi: $e');
+      print('Error adding donasi: $e');
+      return false;
     }
   }
 
-  // Tambah donasi baru (ini adalah method existing yang mungkin sudah ada)
+  // Tambah donasi baru (untuk backward compatibility)
   static Future<bool> addDonasi({
     String? nama,
     String? title,
@@ -145,7 +167,8 @@ class ApiService {
       
       return response.statusCode == 200;
     } catch (e) {
-      throw Exception('Error updating donasi: $e');
+      print('Error updating donasi: $e');
+      return false;
     }
   }
 
@@ -160,54 +183,28 @@ class ApiService {
       
       return response.statusCode == 200;
     } catch (e) {
-      throw Exception('Error deleting donasi: $e');
+      print('Error deleting donasi: $e');
+      return false;
     }
   }
-
-  // Mock data untuk donasi (jika API belum siap)
-  static List<Donasi> _mockDonasi() {
-    return [
-      Donasi(
-        id: 1,
-        nama: 'Bantuan Gempa Aceh',
-        title: 'Bantuan Gempa Aceh',
-        description: 'Bantuan untuk korban gempa di Aceh',
-        targetAmount: 100000000,
-        collectedAmount: 75000000,
-        foto: 'assets/images/gempa_aceh.jpg',
-        imageUrl: 'https://example.com/images/gempa_aceh.jpg',
-        target: 100000000,
-        current: 75000000,
-        nominal: 0,
-        pesan: '',
-        progress: 0.75,
-        deadline: '2025-06-30',
-        isEmergency: true,
-      ),
-      Donasi(
-        id: 2,
-        nama: 'Bantuan Banjir Jakarta',
-        title: 'Bantuan Banjir Jakarta',
-        description: 'Bantuan untuk korban banjir di Jakarta',
-        targetAmount: 50000000,
-        collectedAmount: 25000000,
-        foto: 'assets/images/banjir_jakarta.jpg',
-        imageUrl: 'https://example.com/images/banjir_jakarta.jpg',
-        target: 50000000,
-        current: 25000000,
-        nominal: 0,
-        pesan: '',
-        progress: 0.5,
-        deadline: '2025-07-15',
-        isEmergency: true,
-      ),
-    ];
-  }
-
-  // Get mock donasi (jika API belum siap)
-  static Future<List<Donasi>> getMockDonasi() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
-    return _mockDonasi();
+  
+  // Get donasi by id
+  static Future<Donasi?> getDonasiById(int id) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/read_single.php?id=$id'),
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return Donasi.fromJson(data);
+      } else {
+        print('Failed to fetch donasi: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching donasi: $e');
+      return null;
+    }
   }
 }

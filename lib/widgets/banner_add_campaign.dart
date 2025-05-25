@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/add_campaign_screen.dart'; // Tambahkan import ini
 
 class BannerAddCampaign extends StatelessWidget {
   const BannerAddCampaign({Key? key}) : super(key: key);
@@ -42,6 +43,12 @@ class BannerAddCampaign extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               // Navigate to add campaign page
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddCampaignScreen(),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,

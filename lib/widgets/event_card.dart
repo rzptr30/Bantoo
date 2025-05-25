@@ -4,70 +4,80 @@ class EventCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String imageAsset;
-  
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
+
   const EventCard({
     Key? key,
     required this.title,
     required this.subtitle,
     required this.imageAsset,
+    this.errorBuilder,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+    return Container(
+      width: 260,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: SizedBox(
-        width: 280,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            Image.asset(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image
+          SizedBox(
+            height: 180,
+            width: double.infinity,
+            child: Image.asset(
               imageAsset,
-              height: 180,
-              width: double.infinity,
               fit: BoxFit.cover,
+              errorBuilder: errorBuilder ?? (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Icon(Icons.image_not_supported, size: 40),
+                  ),
+                );
+              },
             ),
-            
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+          ),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
                   ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () {},
-                    child: const Text('REGISTER'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 36),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import '../models/donasi_ini.dart';
 import '../services/api_service.dart';
 import '../widgets/widgets.dart';   // barrel file
 import 'emergency_bantoo_screen.dart'; // Import halaman emergency bantoo
+import 'add_campaign_screen.dart';  // Import halaman tambah campaign
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -48,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   MaterialPageRoute(
                     builder: (context) => const EmergencyBantooScreen(),
                   ),
-                );
+                ).then((_) => _refresh()); // Refresh setelah kembali dari halaman Emergency
               },
             ),
             SliverToBoxAdapter(
@@ -65,7 +66,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     }
                     final data = snap.data ?? [];
                     if (data.isEmpty) {
-                      return const Center(child: Text('Belum ada donasi'));
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.campaign_outlined, 
+                              size: 40, 
+                              color: Colors.grey
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Belum ada donasi emergency',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AddCampaignScreen(),
+                                  ),
+                                ).then((_) => _refresh());
+                              },
+                              child: const Text('Tambah Campaign'),
+                            ),
+                          ],
+                        ),
+                      );
                     }
                     return ListView.separated(
                       scrollDirection: Axis.horizontal,
@@ -93,6 +127,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     title: 'Pelatihan One Day Thousand Smiles',
                     subtitle: 'Surabaya, Jawa Timur • 14/05/2025',
                     imageAsset: 'assets/images/event_$i.jpg',
+                    // Tambahkan error handler untuk gambar
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported, size: 50),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -104,7 +151,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             /* ── Section 4 : Banner ajakan ── */
             const SectionHeader(title: 'Ask For New Campaign'),
-            const SliverToBoxAdapter(child: BannerAddCampaign()),
+            SliverToBoxAdapter(
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddCampaignScreen(),
+                    ),
+                  ).then((_) => _refresh());
+                },
+                child: const BannerAddCampaign(),
+              ),
+            ),
 
             /* ── Footer ── */
             SliverToBoxAdapter(

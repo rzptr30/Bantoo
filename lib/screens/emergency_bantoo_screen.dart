@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/donasi_ini.dart';
 import '../services/api_service.dart';
+import 'add_campaign_screen.dart';
 
 class EmergencyBantooScreen extends StatefulWidget {
-  const EmergencyBantooScreen({super.key});  // Gunakan super parameter
+  const EmergencyBantooScreen({super.key});
 
   @override
   State<EmergencyBantooScreen> createState() => _EmergencyBantooScreenState();
@@ -11,17 +12,33 @@ class EmergencyBantooScreen extends StatefulWidget {
 
 class _EmergencyBantooScreenState extends State<EmergencyBantooScreen> {
   late Future<List<Donasi>> futureDonasi;
+  bool isLoading = true;
+  String errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    futureDonasi = ApiService.getDonasi();
+    _loadData();
   }
 
-  void _refresh() {
+  Future<void> _loadData() async {
     setState(() {
-      futureDonasi = ApiService.getDonasi();
+      isLoading = true;
+      errorMessage = '';
     });
+    
+    try {
+      futureDonasi = ApiService.getDonasi();
+      await futureDonasi; // Tunggu sampai future selesai
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Terjadi kesalahan: $e';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -30,23 +47,76 @@ class _EmergencyBantooScreenState extends State<EmergencyBantooScreen> {
       appBar: AppBar(
         title: const Text('Emergency Bantoo'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+          ),
+        ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _refresh(),
+        onRefresh: () async => _loadData(),
         child: FutureBuilder<List<Donasi>>(
           future: futureDonasi,
           builder: (context, snapshot) {
+            if (isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            if (errorMessage.isNotEmpty) {
+              return Center(child: Text(errorMessage));
+            }
+            
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
+            
             if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
+            
             final data = snapshot.data ?? [];
             if (data.isEmpty) {
-              return const Center(child: Text('Belum ada donasi emergency'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.campaign_outlined,
+                      size: 80,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Belum ada donasi emergency',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tambahkan campaign baru melalui Bantoo Campaign',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddCampaignScreen(),
+                          ),
+                        ).then((_) => _loadData());
+                      },
+                      child: const Text('Tambah Campaign'),
+                    ),
+                  ],
+                ),
+              );
             }
             
+            // Tampilan list donasi
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: data.length,
@@ -62,20 +132,29 @@ class _EmergencyBantooScreenState extends State<EmergencyBantooScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Image section
-                      Image.network(
-                        donasi.imageUrl ?? donasi.foto ?? 'https://via.placeholder.com/400x200?text=Bantoo',
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 180,
-                          width: double.infinity,
-                          color: Colors.grey[300],
-                          child: const Center(
-                            child: Icon(Icons.image, size: 50, color: Colors.grey),
-                          ),
-                        ),
-                      ),
+                      donasi.imageUrl != null || donasi.foto != null
+                          ? Image.network(
+                              donasi.imageUrl ?? donasi.foto ?? 'https://via.placeholder.com/400x200?text=Bantoo',
+                              height: 180,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 180,
+                                width: double.infinity,
+                                color: Colors.grey[300],
+                                child: const Center(
+                                  child: Icon(Icons.image, size: 50, color: Colors.grey),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              height: 180,
+                              width: double.infinity,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Icon(Icons.image, size: 50, color: Colors.grey),
+                              ),
+                            ),
                       
                       // Content section
                       Padding(
@@ -83,12 +162,90 @@ class _EmergencyBantooScreenState extends State<EmergencyBantooScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              donasi.title ?? donasi.nama ?? 'Untitled Campaign',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    donasi.title ?? donasi.nama ?? 'Untitled Campaign',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                PopupMenuButton<String>(
+                                  onSelected: (value) async {
+                                    if (value == 'edit') {
+                                      // Navigasi ke edit campaign
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AddCampaignScreen(
+                                            existingDonasi: donasi,
+                                          ),
+                                        ),
+                                      );
+                                      _loadData(); // Refresh setelah edit
+                                    } else if (value == 'delete') {
+                                      // Konfirmasi delete
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Hapus Campaign'),
+                                          content: const Text('Apakah Anda yakin ingin menghapus campaign ini?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Batal'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Hapus'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      
+                                      if (confirm == true && donasi.id != null) {
+                                        final success = await ApiService.deleteDonasi(donasi.id!);
+                                        if (success && mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Campaign berhasil dihapus')),
+                                          );
+                                          _loadData(); // Refresh setelah delete
+                                        } else if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Gagal menghapus campaign')),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit),
+                                          SizedBox(width: 8),
+                                          Text('Edit'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete, color: Colors.red),
+                                          SizedBox(width: 8),
+                                          Text('Hapus', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 8),
                             
@@ -113,47 +270,8 @@ class _EmergencyBantooScreenState extends State<EmergencyBantooScreen> {
                                 ),
                                 Text(
                                   'dari Rp ${(donasi.targetAmount ?? donasi.target ?? 0).toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            
-                            // Description
-                            Text(
-                              donasi.description ?? donasi.pesan ?? 'No description available',
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Action buttons
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      // View detail action
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                    child: const Text('Lihat Detail'),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      // Donate action
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                    child: const Text('Donasi Sekarang'),
+                                  style: const TextStyle(
+                                    color: Colors.grey,
                                   ),
                                 ),
                               ],
@@ -168,6 +286,17 @@ class _EmergencyBantooScreenState extends State<EmergencyBantooScreen> {
             );
           },
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddCampaignScreen(),
+            ),
+          ).then((_) => _loadData());
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
