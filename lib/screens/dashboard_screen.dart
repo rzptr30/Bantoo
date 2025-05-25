@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/donasi_ini.dart';
 import '../services/api_service.dart';
 import '../widgets/widgets.dart';   // barrel file
+import 'emergency_bantoo_screen.dart'; // Import halaman emergency bantoo
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -38,7 +39,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SliverToBoxAdapter(child: SearchBarDash()),
 
             /* ── Section 1 : Campaign Emergency ── */
-            const SectionHeader(title: 'Emergency Bantoo!'),
+            SectionHeader(
+              title: 'Emergency Bantoo!',
+              showSeeAll: true,
+              onSeeAll: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EmergencyBantooScreen(),
+                  ),
+                );
+              },
+            ),
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 230,

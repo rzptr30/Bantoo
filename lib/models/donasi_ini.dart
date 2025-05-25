@@ -1,50 +1,97 @@
 class Donasi {
-  final int id;
-  final String nama;        // Added this field
-  final String title;       // Kept original field
-  final String description; // Kept original field
-  final String imageUrl;    // Kept original field
-  final String foto;        // Added this field
-  final double target;      // Kept original field
-  final double current;     // Kept original field
-  final double nominal;     // Added this field
-  final String pesan;       // Added this field
-  final double progress;    // Added this field
-  final DateTime deadline;  // Kept original field
-  final bool isEmergency;   // Kept original field
+  final int? id;
+  final String? nama;
+  final String? title;
+  final String? description;
+  final double? targetAmount;
+  final double? collectedAmount;
+  final String? deadline;
+  final int? createdBy;
+  final String? createdAt;
+  final String? foto;         // Properti foto tetap ada
+  final String? imageUrl;     // Tambahkan properti imageUrl
+  final double? nominal;
+  final String? pesan;
+  final double? progress;
+  final bool? isEmergency;
+  final double? target;       // Tambahkan properti target
+  final double? current;      // Tambahkan properti current
+
+  // Tambahkan getter untuk menghitung persentase progres jika tidak ada nilai progress
+  double? get progressPercentage {
+    // Gunakan progress jika sudah ada
+    if (progress != null) {
+      return progress;
+    }
+    // Hitung dari targetAmount dan collectedAmount jika keduanya tersedia
+    if (targetAmount == null || targetAmount == 0 || collectedAmount == null) {
+      return 0.0;
+    }
+    final percentage = collectedAmount! / targetAmount!;
+    return percentage > 1 ? 1.0 : percentage;
+  }
 
   Donasi({
-    required this.id,
-    required this.nama,
-    required this.title,
-    required this.description,
-    required this.imageUrl,
-    required this.foto,
-    required this.target,
-    required this.current,
-    required this.nominal,
-    required this.pesan,
-    required this.progress,
-    required this.deadline,
-    this.isEmergency = false,
+    this.id,
+    this.nama,
+    this.title,
+    this.description,
+    this.targetAmount,
+    this.collectedAmount,
+    this.deadline,
+    this.createdBy,
+    this.createdAt,
+    this.foto,
+    this.imageUrl,  // Tambahkan ke constructor
+    this.nominal,
+    this.pesan,
+    this.progress,
+    this.isEmergency,
+    this.target,     // Tambahkan ke constructor
+    this.current,    // Tambahkan ke constructor
   });
 
-  // Factory constructor to parse from JSON
   factory Donasi.fromJson(Map<String, dynamic> json) {
     return Donasi(
-      id: json['id'],
-      nama: json['nama'] ?? json['title'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
-      foto: json['foto'] ?? json['imageUrl'] ?? '',
-      target: (json['target'] ?? 0).toDouble(),
-      current: (json['current'] ?? 0).toDouble(),
-      nominal: (json['nominal'] ?? 0).toDouble(),
-      pesan: json['pesan'] ?? '',
-      progress: (json['progress'] ?? 0).toDouble(),
-      deadline: json['deadline'] != null ? DateTime.parse(json['deadline']) : DateTime.now().add(const Duration(days: 30)),
-      isEmergency: json['isEmergency'] ?? false,
+      id: json['id'] != null ? int.tryParse(json['id'].toString()) : null,
+      nama: json['nama'],
+      title: json['title'],
+      description: json['description'],
+      targetAmount: json['target_amount'] != null ? double.tryParse(json['target_amount'].toString()) : null,
+      collectedAmount: json['collected_amount'] != null ? double.tryParse(json['collected_amount'].toString()) : null,
+      deadline: json['deadline'],
+      createdBy: json['created_by'] != null ? int.tryParse(json['created_by'].toString()) : null,
+      createdAt: json['created_at'],
+      foto: json['foto'],
+      imageUrl: json['image_url'],  // Tambahkan di fromJson
+      nominal: json['nominal'] != null ? double.tryParse(json['nominal'].toString()) : null,
+      pesan: json['pesan'],
+      progress: json['progress'] != null ? double.tryParse(json['progress'].toString()) : null,
+      isEmergency: json['is_emergency'] == 1 || json['is_emergency'] == true,
+      target: json['target'] != null ? double.tryParse(json['target'].toString()) : null,
+      current: json['current'] != null ? double.tryParse(json['current'].toString()) : null,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nama': nama,
+      'title': title,
+      'description': description,
+      'target_amount': targetAmount,
+      'collected_amount': collectedAmount,
+      'deadline': deadline,
+      'created_by': createdBy,
+      'created_at': createdAt,
+      'foto': foto,
+      'image_url': imageUrl,  // Tambahkan di toJson
+      'nominal': nominal,
+      'pesan': pesan,
+      'progress': progress,
+      'is_emergency': isEmergency,
+      'target': target,
+      'current': current,
+    };
   }
 }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/donasi_ini.dart';
 import '../services/api_service.dart';
+import 'edit_donasi_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -11,14 +12,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Donasi>> futureDonasi;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    futureDonasi = ApiService.getDonasi();
+    _refreshDonasi();
   }
 
-  void _refresh() {
+  Future<void> _refreshDonasi() async {
     setState(() {
       futureDonasi = ApiService.getDonasi();
     });
@@ -28,86 +30,42 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-          ),
-        ],
+        title: const Text('Bantoo'),
       ),
-      body: Column(
-        children: [
-          // User greeting card
-          Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: const AssetImage('assets/images/avatar.png'),
-                    radius: 30,
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Welcome, rzptr30',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Last login: 2025-05-24 16:38:02',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+      body: RefreshIndicator(
+        onRefresh: _refreshDonasi,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : FutureBuilder<List<Donasi>>(
+                future: futureDonasi,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  final donasiList = snapshot.data ?? [];
+                  if (donasiList.isEmpty) {
+                    return const Center(child: Text('Belum ada data donasi'));
+                  }
+
+                  return ListView.builder(
+                    itemCount: donasiList.length,
+                    itemBuilder: (context, index) {
+                      return DonasiCard(
+                        donasi: donasiList[index],
+                        onRefresh: _refreshDonasi,
+                      );
+                    },
+                  );
+                },
               ),
-            ),
-          ),
-          
-          // Donations list
-          Expanded(
-            child: FutureBuilder<List<Donasi>>(
-              future: futureDonasi,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                final donasiList = snapshot.data ?? [];
-                
-                if (donasiList.isEmpty) {
-                  return const Center(child: Text('Belum ada donasi'));
-                }
-
-                return ListView.builder(
-                  itemCount: donasiList.length,
-                  itemBuilder: (context, index) {
-                    final donasi = donasiList[index];
-                    return DonasiCard(donasi: donasi); // Fix this line to pass the donasi correctly
-                  },
-                );
-              },
-            ),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushNamed(context, '/tambah-donasi').then((_) => _refresh());
+          // Navigate to add donasi screen
         },
         child: const Icon(Icons.add),
       ),
@@ -115,116 +73,191 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Add this class to fix the missing parameter error
-class DonasiCard extends StatelessWidget {
+class DonasiCard extends StatefulWidget {
   final Donasi donasi;
-  
+  final VoidCallback onRefresh;
+
   const DonasiCard({
-    Key? key,
+    super.key,
     required this.donasi,
-  }) : super(key: key);
+    required this.onRefresh,
+  });
+
+  @override
+  State<DonasiCard> createState() => _DonasiCardState();
+}
+
+class _DonasiCardState extends State<DonasiCard> {
+  bool _isDeleting = false;
+
+  Future<void> _deleteDonasi(int id) async {
+    if (_isDeleting) return;
+    
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      final success = await ApiService.deleteDonasi(id);
+      
+      if (mounted) { // Periksa apakah widget masih ada
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Donasi berhasil dihapus')),
+          );
+          widget.onRefresh();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus donasi')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) { // Periksa apakah widget masih ada
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: AssetImage(donasi.foto),
-                  radius: 25,
+      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with image
+          widget.donasi.foto != null && widget.donasi.foto!.isNotEmpty
+              ? Image.network(
+                  widget.donasi.foto!,
+                  width: double.infinity,
+                  height: 150,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 150,
+                    color: Colors.grey[300],
+                    child: const Center(child: Icon(Icons.image)),
+                  ),
+                )
+              : Container(
+                  height: 150,
+                  color: Colors.grey[300],
+                  child: const Center(child: Icon(Icons.image)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+          
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.donasi.nama ?? 'No Name',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Nominal: Rp ${widget.donasi.nominal?.toStringAsFixed(0) ?? '0'} - Pesan: ${widget.donasi.pesan ?? '-'}',
+                ),
+                const SizedBox(height: 12),
+                
+                // Progress bar
+                if (widget.donasi.progress != null)
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        donasi.nama,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                      LinearProgressIndicator(
+                        value: widget.donasi.progress,
+                        backgroundColor: Colors.grey[300],
                       ),
+                      const SizedBox(height: 4),
                       Text(
-                        'Rp ${donasi.nominal.toStringAsFixed(0)} - ${donasi.pesan}',
+                        '${(widget.donasi.progress! * 100).toStringAsFixed(0)}% Complete',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           color: Colors.grey[600],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () async {
-                    try {
-                      await ApiService.deleteDonasi(donasi.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Donasi berhasil dihapus')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: donasi.progress / 100,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).primaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${donasi.progress.toStringAsFixed(1)}% funded',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/detail-donasi',
-                      arguments: donasi,
-                    );
-                  },
-                  child: const Text('VIEW DETAILS'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/edit-donasi',
-                      arguments: donasi,
-                    );
-                  },
-                  child: const Text('EDIT'),
+                const SizedBox(height: 12),
+                
+                // Action buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _isDeleting
+                          ? null
+                          : () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditDonasiScreen(
+                                    donasi: widget.donasi,
+                                  ),
+                                ),
+                              );
+                              
+                              if (result == true) {
+                                widget.onRefresh();
+                              }
+                            },
+                      child: const Text('Edit'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _isDeleting
+                          ? null
+                          : () => _showDeleteConfirmation(context),
+                      child: _isDeleting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Hapus'),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content: const Text('Anda yakin ingin menghapus donasi ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteDonasi(widget.donasi.id ?? 0);
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
       ),
     );
   }
