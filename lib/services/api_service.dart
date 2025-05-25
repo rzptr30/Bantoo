@@ -1,14 +1,19 @@
+import 'dart:async'; // Tambahkan ini untuk TimeoutException
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/donasi_ini.dart';
 
 class ApiService {
+  
   static const String baseUrl = 'http://10.0.2.2/bantoo_api'; // URL server
 
   // Get semua donasi
   static Future<List<Donasi>> getDonasi() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/read.php'));
+      print('getDonasi - Fetching data from: $baseUrl/read.php');
+      
+      final response = await http.get(Uri.parse('$baseUrl/read.php'))
+          .timeout(const Duration(seconds: 15)); // Tambahkan timeout
       
       print('getDonasi - Status Code: ${response.statusCode}');
       print('getDonasi - Response Body: ${response.body}');
@@ -40,6 +45,9 @@ class ApiService {
         print('getDonasi - Failed to load donasi: ${response.statusCode}');
         return []; // Kembalikan list kosong daripada throw exception
       }
+    } on TimeoutException catch (_) {
+      print('getDonasi - Request timed out');
+      return [];
     } catch (e) {
       // Tangkap semua error dan kembalikan list kosong
       print('getDonasi - Error fetching donasi: $e');
@@ -47,7 +55,7 @@ class ApiService {
     }
   }
 
-  // Tambahkan method tambahDonasi dengan logging
+  // Tambahkan method tambahDonasi dengan timeout dan logging lebih detail
   static Future<bool> tambahDonasi({
     String? nama,
     String? title,
@@ -83,15 +91,19 @@ class ApiService {
         'is_emergency': isEmergency,
       };
       
+      // Filter out null values
+      payload.removeWhere((key, value) => value == null);
+      
       // Log payload yang akan dikirim
       print('tambahDonasi - Sending payload: ${json.encode(payload)}');
+      print('tambahDonasi - Endpoint URL: $baseUrl/create.php');
       
-      // Kirim request ke server
+      // Kirim request ke server dengan timeout 30 detik
       final response = await http.post(
         Uri.parse('$baseUrl/create.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(payload),
-      );
+      ).timeout(const Duration(seconds: 30)); // Tambahkan timeout 30 detik
       
       // Log response dari server
       print('tambahDonasi - Response status code: ${response.statusCode}');
@@ -122,6 +134,9 @@ class ApiService {
         print('tambahDonasi - Failed with status code: ${response.statusCode}');
         return false;
       }
+    } on TimeoutException catch (_) {
+      print('tambahDonasi - Request timed out after 30 seconds');
+      return false;
     } catch (e) {
       print('tambahDonasi - Error: $e');
       return false;
@@ -164,7 +179,7 @@ class ApiService {
     );
   }
 
-  // Update donasi dengan logging
+  // Update donasi dengan timeout dan logging
   static Future<bool> updateDonasi({
     required int id,
     String? nama,
@@ -202,15 +217,19 @@ class ApiService {
         'is_emergency': isEmergency,
       };
       
+      // Filter out null values
+      payload.removeWhere((key, value) => value == null);
+      
       // Log payload yang akan dikirim
       print('updateDonasi - Sending payload: ${json.encode(payload)}');
+      print('updateDonasi - Endpoint URL: $baseUrl/update.php');
       
-      // Kirim request ke server
+      // Kirim request ke server dengan timeout 30 detik
       final response = await http.post(
         Uri.parse('$baseUrl/update.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(payload),
-      );
+      ).timeout(const Duration(seconds: 30)); // Tambahkan timeout 30 detik
       
       // Log response dari server
       print('updateDonasi - Response status code: ${response.statusCode}');
@@ -241,44 +260,63 @@ class ApiService {
         print('updateDonasi - Failed with status code: ${response.statusCode}');
         return false;
       }
+    } on TimeoutException catch (_) {
+      print('updateDonasi - Request timed out after 30 seconds');
+      return false;
     } catch (e) {
       print('updateDonasi - Error: $e');
       return false;
     }
   }
 
-  // Delete donasi dengan logging
+  // Delete donasi dengan timeout dan logging
   static Future<bool> deleteDonasi(int id) async {
     try {
       // Log payload yang akan dikirim
       print('deleteDonasi - Deleting donasi with ID: $id');
+      print('deleteDonasi - Endpoint URL: $baseUrl/delete.php');
       
-      // Kirim request ke server
+      // Kirim request ke server dengan timeout 30 detik
       final response = await http.post(
         Uri.parse('$baseUrl/delete.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'id': id}),
-      );
+      ).timeout(const Duration(seconds: 30)); // Tambahkan timeout 30 detik
       
       // Log response dari server
       print('deleteDonasi - Response status code: ${response.statusCode}');
       print('deleteDonasi - Response body: ${response.body}');
       
+      // Parse response body jika ada
+      Map<String, dynamic>? responseData;
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+          print('deleteDonasi - Parsed response: $responseData');
+        }
+      } catch (e) {
+        print('deleteDonasi - Error parsing response: $e');
+      }
+      
       return response.statusCode == 200;
+    } on TimeoutException catch (_) {
+      print('deleteDonasi - Request timed out after 30 seconds');
+      return false;
     } catch (e) {
       print('deleteDonasi - Error: $e');
       return false;
     }
   }
   
-  // Get donasi by id dengan logging
+  // Get donasi by id dengan timeout dan logging
   static Future<Donasi?> getDonasiById(int id) async {
     try {
       print('getDonasiById - Fetching donasi with ID: $id');
+      print('getDonasiById - Endpoint URL: $baseUrl/read_single.php?id=$id');
       
       final response = await http.get(
         Uri.parse('$baseUrl/read_single.php?id=$id'),
-      );
+      ).timeout(const Duration(seconds: 30)); // Tambahkan timeout 30 detik
       
       print('getDonasiById - Response status code: ${response.statusCode}');
       print('getDonasiById - Response body: ${response.body}');
@@ -290,6 +328,9 @@ class ApiService {
         print('getDonasiById - Failed to fetch donasi: ${response.statusCode}');
         return null;
       }
+    } on TimeoutException catch (_) {
+      print('getDonasiById - Request timed out after 30 seconds');
+      return null;
     } catch (e) {
       print('getDonasiById - Error: $e');
       return null;
