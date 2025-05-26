@@ -5,8 +5,8 @@ import '../models/donasi_ini.dart';
 
 class ApiService {
   
-  static const String baseUrl = 'http://10.0.2.2/bantoo_api'; // URL server
-  
+  // static const String baseUrl = 'http://10.0.2.2/bantoo_api'; // URL server
+  static const String baseUrl = 'http://192.168.1.50/bantoo_api'; // URL server
   // Tambahkan fungsi test koneksi ini
   static Future<bool> testConnection() async {
     try {
@@ -101,114 +101,114 @@ class ApiService {
     }
   }
 
-  // Tambahkan method tambahDonasi dengan timeout dan logging lebih detail
-  static Future<bool> tambahDonasi({
-    String? nama,
-    String? title,
-    String? description,
-    double? targetAmount,
-    double? collectedAmount,
-    String? foto,
-    String? imageUrl,
-    double? target,
-    double? current,
-    double? nominal,
-    String? pesan,
-    double? progress,
-    String? deadline,
-    bool? isEmergency,
-  }) async {
+  // Ganti fungsi tambahDonasi berikut (baris 105-211) dengan kode di bawah ini:
+
+// Tambahkan method tambahDonasi dengan timeout dan logging lebih detail
+static Future<bool> tambahDonasi({
+  String? nama,
+  String? title,
+  String? description,
+  double? targetAmount,
+  double? collectedAmount,
+  String? foto,
+  String? imageUrl,
+  double? target,
+  double? current,
+  double? nominal,
+  String? pesan,
+  double? progress,
+  String? deadline,
+  bool? isEmergency,
+}) async {
+  try {
+    // Buat payload untuk dikirim ke server
+    final Map<String, dynamic> payload = {
+      'nama': nama,
+      'title': title,
+      'description': description,
+      'target_amount': targetAmount,
+      'collected_amount': collectedAmount ?? 0.0,
+      'foto': foto,
+      'image_url': imageUrl ?? '',
+      'target': target,
+      'current': current,
+      'nominal': nominal,
+      'pesan': pesan,
+      'progress': progress,
+      'deadline': deadline,
+      'is_emergency': isEmergency,
+    };
+    
+    // Filter out null values
+    payload.removeWhere((key, value) => value == null);
+    
+    // Log payload yang akan dikirim
+    print('tambahDonasi - Sending payload: ${json.encode(payload)}');
+    
+    // Coba endpoint baru terlebih dahulu
+    final String endpoint = '$baseUrl/create_campaign.php';
+    print('tambahDonasi - Using new endpoint URL: $endpoint');
+    
     try {
-      // Buat payload untuk dikirim ke server
-      final Map<String, dynamic> payload = {
-        'nama': nama,
-        'title': title,
-        'description': description,
-        'target_amount': targetAmount,
-        'collected_amount': collectedAmount,
-        'foto': foto,
-        'image_url': imageUrl,
-        'target': target,
-        'current': current,
-        'nominal': nominal,
-        'pesan': pesan,
-        'progress': progress,
-        'deadline': deadline,
-        'is_emergency': isEmergency,
-      };
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 30));
       
-      // Filter out null values
-      payload.removeWhere((key, value) => value == null);
+      print('tambahDonasi - Response status code: ${response.statusCode}');
+      print('tambahDonasi - Response body: ${response.body}');
       
-      // Log payload yang akan dikirim
-      print('tambahDonasi - Sending payload: ${json.encode(payload)}');
-      print('tambahDonasi - Endpoint URL: $baseUrl/create.php');
-      
-      // Kirim request ke server dengan timeout 30 detik
-      try {
-        final response = await http.post(
-          Uri.parse('$baseUrl/create.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode(payload),
-        ).timeout(const Duration(seconds: 30));
-        
-        // Log response dari server
-        print('tambahDonasi - Response status code: ${response.statusCode}');
-        print('tambahDonasi - Response body: ${response.body}');
-        
-        // Parse response body jika ada
-        Map<String, dynamic>? responseData;
+      if (response.statusCode == 200) {
         try {
           if (response.body.isNotEmpty) {
-            responseData = json.decode(response.body);
+            final responseData = json.decode(response.body);
             print('tambahDonasi - Parsed response: $responseData');
+            
+            if (responseData['success'] == true) {
+              print('tambahDonasi - Success: ${responseData['message']}');
+              return true;
+            } else {
+              print('tambahDonasi - API returned error: ${responseData['message']}');
+              return false;
+            }
           }
         } catch (e) {
           print('tambahDonasi - Error parsing response: $e');
         }
-        
-        // Cek status code dan 'success' field dari response
-        if (response.statusCode == 200) {
-          if (responseData != null && responseData['success'] == true) {
-            print('tambahDonasi - Success: ${responseData['message']}');
-            return true;
-          } else if (responseData != null) {
-            print('tambahDonasi - Failed: ${responseData['message']}');
-            return false;
-          }
-          return true; // Default success jika tidak ada field 'success' di response
-        } else {
-          print('tambahDonasi - Failed with status code: ${response.statusCode}');
-          return false;
-        }
-      } on TimeoutException catch (_) {
-        print('tambahDonasi - Primary URL timed out, trying alternative URL...');
-        
-        // Coba dengan URL alternatif (langsung ke root)
-        try {
-          print('tambahDonasi - Using alternative URL: http://10.0.2.2/create_test.php');
-          
-          final altResponse = await http.post(
-            Uri.parse('http://10.0.2.2/create_test.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode(payload),
-          ).timeout(const Duration(seconds: 15));
-          
-          print('tambahDonasi - Alt response status: ${altResponse.statusCode}');
-          print('tambahDonasi - Alt response body: ${altResponse.body}');
-          
-          // Jika alternatif berhasil, kita anggap sukses untuk testing
-          return altResponse.statusCode == 200;
-        } catch (altError) {
-          print('tambahDonasi - Alternative URL also failed: $altError');
-          return false;
-        }
+        return true; // Default return jika tidak ada error
+      } else {
+        print('tambahDonasi - Failed with status code: ${response.statusCode}');
+        return false;
       }
-    } catch (e) {
-      print('tambahDonasi - Error: $e');
-      return false;
+    } on TimeoutException catch (_) {
+      // Jika endpoint baru timeout, coba endpoint lama
+      print('tambahDonasi - New endpoint timed out, trying original endpoint...');
+      
+      try {
+        final originalEndpoint = '$baseUrl/create.php';
+        print('tambahDonasi - Using original endpoint: $originalEndpoint');
+        
+        final response = await http.post(
+          Uri.parse(originalEndpoint),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(payload),
+        ).timeout(const Duration(seconds: 30));
+        
+        print('tambahDonasi - Original endpoint response status: ${response.statusCode}');
+        print('tambahDonasi - Original endpoint response body: ${response.body}');
+        
+        return response.statusCode == 200;
+      } catch (e) {
+        print('tambahDonasi - All endpoints failed: $e');
+        return false;
+      }
     }
+  } catch (e) {
+    print('tambahDonasi - Error: $e');
+    return false;
   }
+}
 
   // Method tambah donasi baru (alias untuk tambahDonasi)
   static Future<bool> addDonasi({
